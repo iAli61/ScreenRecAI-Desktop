@@ -1,7 +1,6 @@
-# Transrecorder – Screen Recorder with Local AI Transcripts & Summaries
+# ScreenRecAI-Desktop – Screen Recorder with Local AI Transcripts \& Summaries
 
 ![Application Icon](./resources/icon.png)
-
 An open-source desktop screen recorder built with Electron, React, and TypeScript. Capture your screen, save videos locally, and auto-generate transcripts and AI summaries using Ollama — all offline, privacy-first, and fully customizable.
 
 ## ✨ Features
@@ -16,6 +15,7 @@ An open-source desktop screen recorder built with Electron, React, and TypeScrip
 - **🔄 Cross-Platform** - Works seamlessly on Windows, macOS, and Linux
 - **🔒 Privacy-First** - All processing happens locally, no data sent to external servers
 - **⚡ Automated Setup** - One-command setup for all binary dependencies
+
 
 ## 📸 Screenshots
 
@@ -33,10 +33,10 @@ An open-source desktop screen recorder built with Electron, React, and TypeScrip
 
 The fastest way to get started:
 
-1. **Visit [Releases](https://github.com/LinuxDevil/MeetingVideo-Transrecorder/releases)**
+1. **Visit [Releases](https://github.com/LinuxDevil/ScreenRecAI-Desktop/releases)**
 2. **Download for your platform:**
-   - **Windows**: `meetingvideo-transrecorder-1.0.0-setup.exe`
-   - **macOS**: `meetingvideo-transrecorder-1.0.0.dmg`
+    - **Windows**: `meetingvideo-transrecorder-1.0.0-setup.exe`
+    - **macOS**: `meetingvideo-transrecorder-1.0.0.dmg`
 3. **Install and launch the application**
 
 ### Build from Source
@@ -45,33 +45,32 @@ For developers or those who need the latest features:
 
 ```bash
 # Clone the repository
-git clone https://github.com/LinuxDevil/MeetingVideo-Transrecorder
+git clone [https://github.com/LinuxDevil/ScreenRecAI-Desktop](https://github.com/LinuxDevil/ScreenRecAI-Desktop)
 cd meetingvideo-transrecorder
-
 # Install dependencies
 npm install
 pip install -r requirements.txt
-
 # Start development server
 npm run dev
 ```
+
 
 ## 📋 Requirements
 
 ### Essential Dependencies
 
-| Component   | Version | Purpose                |
-| ----------- | ------- | ---------------------- |
-| **Node.js** | 16+     | Runtime environment    |
-| **Python**  | 3.8+    | Audio processing       |
-| **FFmpeg**  | Latest  | Video/audio conversion |
+| Component | Version | Purpose |
+| :-- | :-- | :-- |
+| **Node.js** | 16+ | Runtime environment |
+| **Python** | 3.8+ | Audio processing |
+| **FFmpeg** | Latest | Video/audio conversion |
 
 ### Optional (for AI features)
 
-| Component           | Purpose                          |
-| ------------------- | -------------------------------- |
-| **Ollama**          | Local AI model for summarization |
-| **Python packages** | Speech-to-text processing        |
+| Component | Purpose |
+| :-- | :-- |
+| **Ollama** | Local AI model for summarization |
+| **Python packages** | Speech-to-text processing |
 
 ## 🛠️ Setup Guide
 
@@ -82,32 +81,37 @@ The easiest way to set up all binary dependencies:
 ```bash
 # Setup for current platform (recommended)
 ./setup-binaries.sh
-
 # Or setup for all platforms
 ./setup-binaries.sh all
-
 # Or setup for specific platform
 ./setup-binaries.sh macos 
 ./setup-binaries.sh windows
 ./setup-binaries.sh linux
 ```
 
+
 ### What the Setup Script Does
 
 #### macOS Setup
+
 - Creates a Python virtual environment in `python-runtime/`
 - Installs all dependencies from `requirements.txt`
 - Downloads FFmpeg binary to `ffmpeg-bin/`
 
+
 #### Windows Setup
+
 - Downloads FFmpeg binary to `ffmpeg-bin-windows/`
 - Uses system Python (no bundled runtime needed)
 - Requires `pip install -r requirements.txt` for dependencies
 
+
 #### Linux Setup
+
 - Creates a Python virtual environment in `python-runtime/`
 - Installs all dependencies from `requirements.txt`
 - Downloads static FFmpeg binary to `ffmpeg-bin/`
+
 
 ### Directory Structure After Setup
 
@@ -138,11 +142,13 @@ No additional setup required - Windows builds use system Python and bundled FFmp
 
 - Run `./setup-binaries.sh all` to set up binaries for all platforms
 - Use the appropriate npm script for your target platform:
-  ```bash
-  npm run build:mac 
-  npm run build:win 
-  npm run build:linux
-  ```
+
+```bash
+npm run build:mac 
+npm run build:win 
+npm run build:linux
+```
+
 
 ## 🛠️ Manual Installation Guide
 
@@ -155,54 +161,51 @@ FFmpeg is required for audio extraction. Choose your platform:
 ```bash
 # Using Chocolatey (recommended)
 choco install ffmpeg
-
 # Using Scoop
 scoop install ffmpeg
-
 # Manual installation
-# Download from https://ffmpeg.org/download.html
+# Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
 # Extract to C:\ffmpeg and add C:\ffmpeg\bin to PATH
 ```
+
 
 #### macOS
 
 ```bash
 # Using Homebrew
 brew install ffmpeg
-
 # Manual installation
-# Download from https://ffmpeg.org/download.html
+# Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
 # Extract to /usr/local/bin/
 ```
+
 
 #### Linux
 
 ```bash
 # Ubuntu/Debian
 sudo apt update && sudo apt install ffmpeg
-
 # CentOS/RHEL
 sudo yum install ffmpeg
-
 # Arch Linux
 sudo pacman -S ffmpeg
 ```
+
 
 ### Ollama Setup (Optional)
 
 For AI-powered summaries:
 
 ```bash
-# 1. Download from https://ollama.ai/
+# 1. Download from [https://ollama.ai/](https://ollama.ai/)
 # 2. Start Ollama service
 ollama serve
-
 # 3. Pull the required model
 ollama pull mistral
-
 # 4. Verify installation
 ollama list
 ```
+
 
 ### Verification
 
@@ -216,65 +219,79 @@ ffmpeg -version
 ollama list  # if installed
 ```
 
+
 ### Setup Troubleshooting
 
 #### "Python not found" error
+
 - Make sure you've run `./setup-binaries.sh` first
 - Check that the Python runtime was created successfully
 - Verify the paths in `transcript.utils.ts` match your setup
 
+
 #### "FFmpeg not found" error
+
 - Ensure FFmpeg was downloaded by the setup script
 - Check that the FFmpeg binary has execute permissions
 - Verify the FFmpeg path is correct for your platform
+
 
 ### Manual Binary Setup (Alternative)
 
 If the automated setup doesn't work, you can manually set up the binaries:
 
 #### Python Runtime (macOS/Linux only)
+
 1. Create a virtual environment: `python3 -m venv python-runtime`
 2. Activate it: `source python-runtime/bin/activate` (macOS/Linux)
 3. Install dependencies: `pip install -r requirements.txt`
 4. Deactivate: `deactivate`
 
 #### FFmpeg
+
 1. Download from [FFmpeg website](https://ffmpeg.org/download.html)
 2. Extract to `ffmpeg-bin/` directory (macOS/Linux) or `ffmpeg-bin-windows/` (Windows)
 3. Ensure the binary is executable: `chmod +x ffmpeg-bin/ffmpeg` (macOS/Linux)
 
 #### Windows Note
+
 Windows builds rely on system Python, so just ensure Python 3.8+ is installed and run:
+
 ```bash
 pip install -r requirements.txt
 ```
 
+
 ### Python Dependencies
 
 The app requires these Python packages (from `requirements.txt`):
+
 - `openai-whisper>=20231117` - For speech-to-text conversion
 - `SpeechRecognition>=3.10.0` - Alternative speech recognition
 - `pydub>=0.25.1` - Audio processing
 - `torch>=2.0.0` - Machine learning backend
 - `numpy>=1.24.0` - Numerical computations
 
+
 ### Important Notes
 
 #### Development vs Production
 
 - **Development mode**: Uses system Python and FFmpeg on all platforms
-- **Packaged app**: 
-  - macOS/Linux: Uses bundled Python runtime and FFmpeg
-  - Windows: Uses system Python + bundled FFmpeg
+- **Packaged app**:
+    - macOS/Linux: Uses bundled Python runtime and FFmpeg
+    - Windows: Uses system Python + bundled FFmpeg
+
 
 #### Gitignore
 
 The binary directories are automatically ignored by git:
+
 - `python-runtime/` (macOS/Linux only)
 - `ffmpeg-bin/` (macOS/Linux)
 - `ffmpeg-bin-windows/` (Windows)
-
 This keeps the repository clean while allowing developers to set up their own binaries.
+
 
 ## 🎯 Usage
 
@@ -311,15 +328,16 @@ Desktop/
         └── recording-2024-01-15-14-30-25-summary.txt
 ```
 
+
 ## ⚙️ Configuration
 
 ### Recording Types
 
-| Type            | Purpose             | Summary Focus                               |
-| --------------- | ------------------- | ------------------------------------------- |
-| **Google Meet** | Meeting recordings  | Action items, decisions, assignments        |
-| **Lesson**      | Educational content | Learning objectives, key concepts, homework |
-| **Video**       | General content     | Main points, highlights, insights           |
+| Type | Purpose | Summary Focus |
+| :-- | :-- | :-- |
+| **Google Meet** | Meeting recordings | Action items, decisions, assignments |
+| **Lesson** | Educational content | Learning objectives, key concepts, homework |
+| **Video** | General content | Main points, highlights, insights |
 
 ### AI Model Configuration
 
@@ -328,6 +346,7 @@ Change the AI model in `src/main/utils/ollama.utils.ts`:
 ```typescript
 model: 'mistral' // Change to any model you have installed
 ```
+
 
 ### Speech-to-Text Engines
 
@@ -345,18 +364,18 @@ The app supports multiple STT options:
 npm run dev
 ```
 
+
 ### Building for Production
 
 ```bash
 # Windows
 npm run build:win
-
 # macOS
 npm run build:mac
-
 # Linux
 npm run build:linux
 ```
+
 
 ## 🐛 Troubleshooting
 
@@ -367,43 +386,42 @@ npm run build:linux
 ```bash
 # Verify installation
 ffmpeg -version
-
 # Add to PATH if needed
 # Windows: Add C:\ffmpeg\bin to system PATH
 # macOS/Linux: Ensure it's in /usr/local/bin/
 ```
+
 
 #### Ollama Connection Issues
 
 ```bash
 # Start Ollama service
 ollama serve
-
 # Check available models
 ollama list
-
 # Pull required model
 ollama pull mistral
-
 # Test connection
 curl http://localhost:11434/api/tags
 ```
+
 
 #### Python Dependencies
 
 ```bash
 # Install requirements
 pip install -r requirements.txt
-
 # Verify audio_extractor.py exists
 ls audio_extractor.py
 ```
+
 
 #### Desktop Sources Not Found
 
 - This is normal on first run
 - The app will automatically detect available screens
 - Try refreshing or restarting the application
+
 
 ### Debug Mode
 
@@ -413,6 +431,7 @@ Run with enhanced logging:
 npm run dev -- --debug
 ```
 
+
 ### Manual Setup
 
 Use the automated setup script:
@@ -420,6 +439,7 @@ Use the automated setup script:
 ```bash
 python setup.py
 ```
+
 
 ## 🏗️ Project Structure
 
@@ -446,6 +466,7 @@ meetingvideo-transrecorder/
 └── package.json        # Node.js dependencies
 ```
 
+
 ## 🤝 Contributing
 
 We welcome contributions! Here's how to get started:
@@ -463,6 +484,7 @@ We welcome contributions! Here's how to get started:
 - Test on multiple platforms
 - Update documentation as needed
 
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -475,13 +497,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 2. **Review console output for error messages**
 3. **Ensure all prerequisites are installed**
 4. **Try running in debug mode**
-5. **Check [GitHub Issues](https://github.com/LinuxDevil/MeetingVideo-Transrecorder/issues)**
+5. **Check [GitHub Issues](https://github.com/LinuxDevil/ScreenRecAI-Desktop/issues)**
 
 ### Community
 
 - **GitHub Issues**: Report bugs and request features
 - **Discussions**: Ask questions and share ideas
 - **Releases**: Download the latest versions
+
 
 ## 🔄 Continuous Integration
 
@@ -495,11 +518,13 @@ This project uses GitHub Actions for automated builds and releases.
 - **Purpose**: Build Windows and macOS versions
 - **Output**: Uploads artifacts for manual download
 
+
 #### Build and Release (`build.yml`)
 
 - **Triggers**: Tags starting with `v*` (e.g., `v1.0.1`)
 - **Purpose**: Creates GitHub releases with artifacts
 - **Output**: Automatic release with downloadable files
+
 
 ### Using Release Scripts
 
@@ -516,24 +541,26 @@ chmod +x scripts/release.sh
 scripts\release.bat 1.0.1
 ```
 
+
 ### Manual Builds
 
-1. **Go to [Actions](https://github.com/LinuxDevil/MeetingVideo-Transrecorder/actions)**
+1. **Go to [Actions](https://github.com/LinuxDevil/ScreenRecAI-Desktop/actions)**
 2. **Click "Build Artifacts"**
 3. **Click "Run workflow"**
 4. **Select branch and run**
 
 ### Build Matrix
 
-| Platform | Runner           | Build Command       | Output                  |
-| -------- | ---------------- | ------------------- | ----------------------- |
-| Windows  | `windows-latest` | `npm run build:win` | `.exe`, `win-unpacked/` |
-| macOS    | `macos-latest`   | `npm run build:mac` | `.dmg`, `mac/`          |
+| Platform | Runner | Build Command | Output |
+| :-- | :-- | :-- | :-- |
+| Windows | `windows-latest` | `npm run build:win` | `.exe`, `win-unpacked/` |
+| macOS | `macos-latest` | `npm run build:mac` | `.dmg`, `mac/` |
 
 ### Artifacts
 
 - **Build Artifacts**: Available in Actions tab (30-day retention)
 - **Release Artifacts**: Available on Releases page (permanent)
+
 
 ### Recent Updates
 
@@ -542,7 +569,174 @@ scripts\release.bat 1.0.1
 - ✅ **GitHub Actions** - Automated builds and releases
 - ✅ **Cross-platform Support** - Windows and macOS builds
 - ✅ **AI Integration** - Local AI-powered summarization
-
 ---
-
 **Made with ❤️ by [LinuxDevil](https://github.com/LinuxDevil)**
+
+Here's an optimized README structure that maximizes open source appeal, discoverability, and onboarding ease, following best practices and adding some improvements for clarity and search optimization.[^1][^2][^3][^4]
+
+***
+
+# Transrecorder – Screen Recorder with Local AI Transcripts \& Summaries
+
+**Offline, privacy-first screen recorder for Windows, macOS, and Linux. Capture your desktop, save videos locally, and auto-generate transcripts and AI-powered summaries with Ollama—all fully customizable and built with Electron, React, and TypeScript.**
+
+[
+[
+[
+
+***
+
+## ✨ Features
+
+- 🎥 **Screen Recording:** Capture your entire screen or specific windows.[^5]
+- 📁 **Smart File Organization:** Automatically saves to organized folders with timestamps.
+- 🎵 **Audio Extraction:** Extract audio from recorded videos for easy processing.
+- 📝 **AI Transcript Generation:** Local, offline speech-to-text via Whisper and more.
+- 🤖 **AI Summarization:** Get context-aware summaries using Ollama with fully offline models.
+- 🎯 **Recording Profiles:** Optimized for meetings (Google Meet), lessons, or general use.
+- 👀 **Live Preview:** View what you're recording in real-time.
+- 🔄 **Cross-Platform:** Seamless support for Windows, macOS, and Linux.
+- 🔒 **Privacy-First:** No data leaves your machine—everything remains local.
+- ⚡ **Automated Setup:** One-command setup for all key dependencies.
+
+***
+
+## 📸 Screenshots
+
+### Main Application Interface
+
+### Recording in Progress
+
+
+***
+
+## 🚀 Quick Start
+
+### Download Pre-built Binaries
+
+1. Go to the [Releases page](https://github.com/LinuxDevil/ScreenRecAI-Desktop/releases).
+2. Download for:
+    - **Windows:** `meetingvideo-transrecorder-1.0.0-setup.exe`
+    - **macOS:** `meetingvideo-transrecorder-1.0.0.dmg`
+3. Install and launch.
+
+### Build from Source
+
+```bash
+git clone https://github.com/LinuxDevil/MeetingVideo-Transrecorder
+cd meetingvideo-transrecorder
+npm install
+pip install -r requirements.txt
+npm run dev
+```
+
+
+***
+
+## 📋 Requirements
+
+| Component | Version | Purpose |
+| :-- | :-- | :-- |
+| Node.js | 16+ | Runtime environment |
+| Python | 3.8+ | Audio processing |
+| FFmpeg | Latest | Video/audio conversion |
+
+**Optional for AI:**
+
+
+| Component | Purpose |
+| :-- | :-- |
+| Ollama | Local AI summarization engine |
+| Python pkgs | Speech-to-text processing |
+
+
+***
+
+## 🛠️ Setup Guide
+
+**To quickly install everything:**
+
+```bash
+# Platform-specific setup
+./setup-binaries.sh
+# All platforms
+./setup-binaries.sh all
+# Or pick one (e.g. macos, windows, linux)
+```
+
+See the `Manual Installation Guide` below if you prefer to install dependencies yourself.
+
+***
+
+## 🎯 Usage
+
+### Recording Workflow
+
+1. Launch the app.
+2. Choose recording mode (Meeting, Lesson, or Video).
+3. Click "Start Recording", present content, then "Stop Recording".
+4. Download or review your recording and transcript.
+
+### Transcript and Summarization
+
+- Click "Extract Transcript" after recording.
+- Wait while audio is processed and AI models run.
+- Review transcript and the summary (saved automatically).
+
+**Organized files will appear as:**
+
+```
+Desktop/captured-videos/YYYY-MM-DD/
+  ├── recording-2024-09-19-10-10-10.webm
+  ├── recording-2024-09-19-10-10-10.txt
+  └── recording-2024-09-19-10-10-10-summary.txt
+```
+
+
+***
+
+## 🧩 Configuration
+
+- **Recording Profiles:** Fine-tune for Google Meet, lessons, or generic screen content.
+- **AI Model:** Edit `src/main/utils/ollama.utils.ts` (`model: 'mistral'` or any Ollama-supported model).
+- **Speech-to-Text:** Uses Whisper locally (default), Google Speech Recognition (fallback), or plain text if required.
+
+***
+
+## 🐛 Troubleshooting
+
+- **Missing Python/FFmpeg/Ollama:** Double-check setup scripts or refer to manual install below.
+- **Dependencies:** Run `pip install -r requirements.txt`.
+- **Platform detection issues:** App may not detect screens or audio sources first run—restart if needed.
+- **Run with logs:** `npm run dev -- --debug`
+
+See the FAQ and [GitHub Issues](https://github.com/LinuxDevil/ScreenRecAI-Desktop/issues) for help.
+
+***
+
+## 📝 Contributing
+
+Contributions welcome—please fork, branch, and PR! See [CONTRIBUTING.md](CONTRIBUTING.md) for coding style and communication guidelines:
+
+- Use concise, meaningful commit messages.
+- Test changes on multiple platforms.
+- Update documentation.
+- Join [GitHub Discussions](https://github.com/LinuxDevil/ScreenRecAI-Desktop/discussions) for questions and ideas.
+
+***
+
+## 📄 License
+
+Licensed under the [MIT License](LICENSE).
+
+***
+
+## 🙋 Support \& Community
+
+- Need help? [Open an issue](https://github.com/LinuxDevil/ScreenRecAI-Desktop/issues).
+- Feature ideas? Join [Discussions](https://github.com/LinuxDevil/ScreenRecAI-Desktop/discussions).
+- Stay updated via [Releases](https://github.com/LinuxDevil/ScreenRecAI-Desktop/releases).
+
+***
+**Made with love by [LinuxDevil](https://github.com/LinuxDevil)**
+***
