@@ -6,10 +6,11 @@ import { RecordingStatus } from './RecordingStatus/index'
 import { VideoPreview } from './VideoPreview/index'
 import { ScreenSelector } from './ScreenSelector/index'
 import { StoragePath } from './StoragePath/index'
-import { RecordingType, DesktopSource } from '../types'
+import { RecordingType, DesktopSource, CropRegion } from '../types'
 
 interface AppLayoutProps {
   isRecording: boolean
+  isPreviewing: boolean
   isSaving: boolean
   isProcessingTranscript: boolean
   hasVideo: boolean
@@ -24,10 +25,16 @@ interface AppLayoutProps {
   selectedScreen: DesktopSource | null
   timerDuration: number
   timeRemaining: number | null
+  cropRegion: CropRegion | null
+  cropEnabled: boolean
+  onCropChange: (region: CropRegion | null) => void
+  onCropEnabledChange: (enabled: boolean) => void
   onTimerDurationChange: (minutes: number) => void
   onRecordingTypeChange: (type: RecordingType) => void
   onScreenSelect: (screen: DesktopSource | null) => void
   onRefreshScreens: () => Promise<void>
+  onStartPreview: () => Promise<void>
+  onStopPreview: () => void
   onStartRecording: () => Promise<void>
   onStopRecording: () => void
   onDownloadVideo: () => Promise<void>
@@ -36,6 +43,7 @@ interface AppLayoutProps {
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
   isRecording,
+  isPreviewing,
   isSaving,
   isProcessingTranscript,
   hasVideo,
@@ -50,10 +58,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   selectedScreen,
   timerDuration,
   timeRemaining,
+  cropRegion,
+  cropEnabled,
+  onCropChange,
+  onCropEnabledChange,
   onTimerDurationChange,
   onRecordingTypeChange,
   onScreenSelect,
   onRefreshScreens,
+  onStartPreview,
+  onStopPreview,
   onStartRecording,
   onStopRecording,
   onDownloadVideo,
@@ -99,6 +113,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           recordedVideo={recordedVideo}
           previewVideoRef={previewVideoRef}
           videoRef={videoRef}
+          cropRegion={cropRegion}
+          cropEnabled={cropEnabled}
+          isPreviewing={isPreviewing}
+          isRecording={isRecording}
+          selectedScreen={selectedScreen}
+          onCropChange={onCropChange}
+          onCropEnabledChange={onCropEnabledChange}
+          onStartPreview={onStartPreview}
+          onStopPreview={onStopPreview}
         />
       </div>
     </div>

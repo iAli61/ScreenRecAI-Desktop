@@ -1,5 +1,6 @@
 export * from './AlertCircle.icon'
 export * from './CheckCircle.icon'
+export * from './Crop.icon'
 export * from './Download.icon'
 export * from './FileText.icon'
 export * from './Graduation.icon'

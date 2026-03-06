@@ -51,4 +51,11 @@ export interface ElectronAPI {
   selectStoragePath: () => Promise<string | null>
 }
 
+export interface CropRegion {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export type MessageType = 'success' | 'error' | 'loading' | 'info'

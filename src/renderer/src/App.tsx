@@ -6,6 +6,7 @@ export default function App(): React.JSX.Element {
   const {
     stream,
     isRecording,
+    isPreviewing,
     recordedVideo,
     isSaving,
     isProcessingTranscript,
@@ -19,10 +20,16 @@ export default function App(): React.JSX.Element {
     selectedScreen,
     timerDuration,
     timeRemaining,
+    cropRegion,
+    cropEnabled,
+    setCropRegion,
+    setCropEnabled,
     setTimerDuration,
     setRecordingType,
     setSelectedScreen,
     getAvailableScreens,
+    startPreview,
+    stopPreview,
     startRecording,
     stopRecording,
     downloadVideo,
@@ -32,6 +39,7 @@ export default function App(): React.JSX.Element {
   return (
     <AppLayout
       isRecording={isRecording}
+      isPreviewing={isPreviewing}
       isSaving={isSaving}
       isProcessingTranscript={isProcessingTranscript}
       hasVideo={hasVideo}
@@ -46,10 +54,16 @@ export default function App(): React.JSX.Element {
       selectedScreen={selectedScreen}
       timerDuration={timerDuration}
       timeRemaining={timeRemaining}
+      cropRegion={cropRegion}
+      cropEnabled={cropEnabled}
+      onCropChange={setCropRegion}
+      onCropEnabledChange={setCropEnabled}
       onTimerDurationChange={setTimerDuration}
       onRecordingTypeChange={setRecordingType}
       onScreenSelect={setSelectedScreen}
       onRefreshScreens={getAvailableScreens}
+      onStartPreview={startPreview}
+      onStopPreview={stopPreview}
       onStartRecording={startRecording}
       onStopRecording={stopRecording}
       onDownloadVideo={downloadVideo}

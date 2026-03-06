@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { RecordingType, DesktopCaptureConstraints, DesktopSource } from '../types'
+import { RecordingType, DesktopCaptureConstraints, DesktopSource, CropRegion } from '../types'
 import {
   generateFilename,
   generateTranscriptFilename,
@@ -9,6 +9,7 @@ import {
 interface UseRecordingReturn {
   stream: MediaStream | null
   isRecording: boolean
+  isPreviewing: boolean
   recordedVideo: string | null
   isSaving: boolean
   isProcessingTranscript: boolean
@@ -22,10 +23,16 @@ interface UseRecordingReturn {
   selectedScreen: DesktopSource | null
   timerDuration: number
   timeRemaining: number | null
+  cropRegion: CropRegion | null
+  cropEnabled: boolean
+  setCropRegion: (region: CropRegion | null) => void
+  setCropEnabled: (enabled: boolean) => void
   setTimerDuration: (minutes: number) => void
   setRecordingType: (type: RecordingType) => void
   setSelectedScreen: (screen: DesktopSource | null) => void
   getAvailableScreens: () => Promise<void>
+  startPreview: () => Promise<void>
+  stopPreview: () => void
   startRecording: () => Promise<void>
   stopRecording: () => void
   downloadVideo: () => Promise<void>
@@ -46,6 +53,9 @@ export const useRecording = (): UseRecordingReturn => {
   const [selectedScreen, setSelectedScreen] = useState<DesktopSource | null>(null)
   const [timerDuration, setTimerDuration] = useState<number>(0)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
+  const [cropRegion, setCropRegion] = useState<CropRegion | null>(null)
+  const [cropEnabled, setCropEnabled] = useState(false)
+  const [isPreviewing, setIsPreviewing] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const chunksRef = useRef<Blob[]>([])
   const currentBlobRef = useRef<Blob | null>(null)
@@ -53,6 +63,13 @@ export const useRecording = (): UseRecordingReturn => {
   const previewVideoRef = useRef<HTMLVideoElement>(null)
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const autoStopPendingRef = useRef(false)
+  const cropRegionRef = useRef<CropRegion | null>(null)
+  const cropVideoRef = useRef<HTMLVideoElement | null>(null)
+  const animFrameRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    cropRegionRef.current = cropRegion
+  }, [cropRegion])
 
   useEffect(() => {
     if (previewVideoRef.current && stream) {
@@ -83,6 +100,46 @@ export const useRecording = (): UseRecordingReturn => {
     getAvailableScreens()
   }, [getAvailableScreens])
 
+  const cleanupCropPipeline = (): void => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current)
+      animFrameRef.current = null
+    }
+    if (cropVideoRef.current) {
+      cropVideoRef.current.pause()
+      cropVideoRef.current.srcObject = null
+      cropVideoRef.current = null
+    }
+  }
+
+  const startPreview = async (): Promise<void> => {
+    if (!selectedScreen || !window.electronAPI) return
+
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: selectedScreen.id
+          }
+        } as MediaTrackConstraints & DesktopCaptureConstraints
+      })
+      setStream(mediaStream)
+      setIsPreviewing(true)
+    } catch (error) {
+      console.error('Error starting preview:', error)
+    }
+  }
+
+  const stopPreview = (): void => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop())
+      setStream(null)
+    }
+    setIsPreviewing(false)
+  }
+
   const startRecording = async (): Promise<void> => {
     if (!window.electronAPI) {
       console.error('electronAPI is not available.')
@@ -92,6 +149,13 @@ export const useRecording = (): UseRecordingReturn => {
     if (!selectedScreen) {
       console.error('No screen selected for recording.')
       return
+    }
+
+    // Stop preview if running
+    if (isPreviewing && stream) {
+      stream.getTracks().forEach((track) => track.stop())
+      setStream(null)
+      setIsPreviewing(false)
     }
 
     try {
@@ -111,8 +175,54 @@ export const useRecording = (): UseRecordingReturn => {
       })
       setStream(mediaStream)
 
+      let recordingStream: MediaStream
+
+      if (cropEnabled && cropRegion) {
+        // Canvas-based cropping pipeline
+        const sourceVideo = document.createElement('video')
+        sourceVideo.srcObject = mediaStream
+        sourceVideo.muted = true
+        await sourceVideo.play()
+
+        const videoWidth = sourceVideo.videoWidth
+        const videoHeight = sourceVideo.videoHeight
+
+        const canvas = document.createElement('canvas')
+        const region = cropRegion
+        canvas.width = Math.round(region.width * videoWidth)
+        canvas.height = Math.round(region.height * videoHeight)
+        const ctx = canvas.getContext('2d')!
+
+        cropVideoRef.current = sourceVideo
+
+        const drawFrame = (): void => {
+          const r = cropRegionRef.current
+          if (r && ctx) {
+            const sx = Math.round(r.x * videoWidth)
+            const sy = Math.round(r.y * videoHeight)
+            const sw = Math.round(r.width * videoWidth)
+            const sh = Math.round(r.height * videoHeight)
+            if (canvas.width !== sw || canvas.height !== sh) {
+              canvas.width = sw
+              canvas.height = sh
+            }
+            ctx.drawImage(sourceVideo, sx, sy, sw, sh, 0, 0, sw, sh)
+          }
+          animFrameRef.current = requestAnimationFrame(drawFrame)
+        }
+        animFrameRef.current = requestAnimationFrame(drawFrame)
+
+        const canvasStream = canvas.captureStream(30)
+        recordingStream = new MediaStream([
+          ...canvasStream.getVideoTracks(),
+          ...mediaStream.getAudioTracks()
+        ])
+      } else {
+        recordingStream = mediaStream
+      }
+
       const mimeType = getVideoMimeType()
-      const mediaRecorder = new MediaRecorder(mediaStream, {
+      const mediaRecorder = new MediaRecorder(recordingStream, {
         mimeType: mimeType
       })
 
@@ -187,6 +297,7 @@ export const useRecording = (): UseRecordingReturn => {
       timerIntervalRef.current = null
     }
     setTimeRemaining(null)
+    cleanupCropPipeline()
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop()
     }
@@ -317,6 +428,7 @@ Summary: ${result.summaryPath}`)
   return {
     stream,
     isRecording,
+    isPreviewing,
     recordedVideo,
     isSaving,
     isProcessingTranscript,
@@ -330,10 +442,16 @@ Summary: ${result.summaryPath}`)
     selectedScreen,
     timerDuration,
     timeRemaining,
+    cropRegion,
+    cropEnabled,
+    setCropRegion,
+    setCropEnabled,
     setTimerDuration,
     setRecordingType,
     setSelectedScreen,
     getAvailableScreens,
+    startPreview,
+    stopPreview,
     startRecording,
     stopRecording,
     downloadVideo,

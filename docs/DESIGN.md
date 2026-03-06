@@ -25,7 +25,7 @@
 
 ## 1. High-Level Architecture
 
-ScreenRecAI-Desktop follows the standard **Electron three-process model**: a Main process (Node.js), a Preload bridge (isolated script), and a Renderer process (Chromium + React). The application captures screen video via Chromium's `desktopCapturer`, saves recordings as `.mp4` files, extracts audio with **FFmpeg**, transcribes it using **OpenAI Whisper** (local), and generates AI summaries via **Ollama** (local LLM). An optional **timed recording** mode allows users to set a duration; when the timer expires the recording automatically stops and triggers the full save + transcript + summary pipeline.
+ScreenRecAI-Desktop follows the standard **Electron three-process model**: a Main process (Node.js), a Preload bridge (isolated script), and a Renderer process (Chromium + React). The application captures screen video via Chromium's `desktopCapturer`, saves recordings as `.mp4` files, extracts audio with **FFmpeg**, transcribes it using **OpenAI Whisper** (local), and generates AI summaries via **Ollama** (local LLM). An optional **timed recording** mode allows users to set a duration; when the timer expires the recording automatically stops and triggers the full save + transcript + summary pipeline. A **canvas-based crop** mode lets users select a Region of Interest (ROI) on the live preview; when enabled, an offscreen `<canvas>` captures only the cropped area via `requestAnimationFrame` + `canvas.captureStream()`, producing a smaller output video.
 
 ```mermaid
 graph TB
@@ -125,6 +125,15 @@ ScreenRecAI-Desktop/
 │           ├── App.tsx          #   Root component
 │           ├── main.tsx         #   React DOM entry
 │           ├── components/      #   UI components
+│           │   ├── CropOverlay/ #     Canvas crop selection overlay
+│           │   ├── Header/
+│           │   ├── icons/       #     SVG icon components (incl. Crop)
+│           │   ├── RecordingControls/
+│           │   ├── RecordingStatus/
+│           │   ├── ScreenSelector/
+│           │   ├── StatusMessages/
+│           │   ├── StoragePath/
+│           │   └── VideoPreview/ #     Live preview + recorded + crop controls
 │           ├── hooks/           #   Custom React hooks
 │           ├── styles/          #   CSS files
 │           ├── types/           #   Frontend type definitions
@@ -358,7 +367,8 @@ graph TD
     Layout --> RC["RecordingControls<br/>Timer + Start/Stop/Download/Transcript"]
     Layout --> SM["StatusMessages<br/>Success/error/loading"]
     Layout --> RS["RecordingStatus<br/>LIVE indicator"]
-    Layout --> VP["VideoPreview<br/>Live + recorded views"]
+    Layout --> VP["VideoPreview<br/>Live + recorded + crop views"]
+    VP --> CO["CropOverlay<br/>Canvas ROI selector"]
 
     Hook -.->|"state & actions"| Layout
 
@@ -373,6 +383,7 @@ graph TD
     style SM fill:#F3E5F5,color:#000
     style RS fill:#F3E5F5,color:#000
     style VP fill:#F3E5F5,color:#000
+    style CO fill:#E1BEE7,color:#000
 ```
 
 ### 6.2 Component Details
@@ -387,7 +398,8 @@ graph TD
 | **StoragePath** | `StoragePath/index.tsx` | Displays the current storage directory path with a "Change" button that opens a native folder picker via `selectStoragePath()` IPC |
 | **StatusMessages** | `StatusMessages/index.tsx` | Renders success (✅), error (❌), and loading (🔄) messages with icons |
 | **RecordingStatus** | `RecordingStatus/index.tsx` | Conditional red "LIVE" badge visible during active recording |
-| **VideoPreview** | `VideoPreview/index.tsx` | Two-panel layout: live `<video>` preview (stream) and recorded `<video>` playback (blob URL) |
+| **VideoPreview** | `VideoPreview/index.tsx` | Two-panel layout: live `<video>` preview (stream) and recorded `<video>` playback (blob URL). Hosts crop toggle/clear buttons and renders the `CropOverlay` on the live preview panel. Auto-starts a preview stream when crop mode is activated. |
+| **CropOverlay** | `CropOverlay/index.tsx` | Canvas-based overlay rendered on top of the live preview `<video>`. Handles mouse drag to draw a crop rectangle, converts pixel coordinates to normalized (0–1) video coordinates, renders a semi-transparent mask outside the selection with a dashed border and corner handles, and displays a pixel-dimension label. |
 
 ### 6.3 The `useRecording` Hook — Core State Machine
 
@@ -398,7 +410,10 @@ stateDiagram-v2
     [*] --> Idle: App mounts
 
     Idle --> ScreenSelected: onScreenSelect()
+    ScreenSelected --> Previewing: startPreview() [crop mode]
     ScreenSelected --> Recording: startRecording()
+    Previewing --> Recording: startRecording()
+    Previewing --> ScreenSelected: stopPreview()
     Recording --> Recorded: stopRecording()
     Recording --> Recorded: timer expires (auto-stop)
     Recorded --> Saving: downloadVideo()
@@ -414,12 +429,20 @@ stateDiagram-v2
         FetchScreens --> ScreensLoaded: getAvailableScreens()
     }
 
+    state Previewing {
+        [*] --> LivePreview
+        LivePreview: Video-only stream active
+        LivePreview: User draws crop rectangle on CropOverlay
+        LivePreview: cropRegion stored as normalized coords
+    }
+
     state Recording {
         [*] --> Capturing
         Capturing: MediaRecorder.start(1000)
         Capturing: Chunks accumulate in chunksRef
         Capturing: previewVideoRef shows live stream
         Capturing: If timerDuration > 0, countdown runs
+        Capturing: If cropRegion set, canvas pipeline active
     }
 
     state Recorded {
@@ -433,6 +456,7 @@ stateDiagram-v2
 **Key state variables:**
 - `stream` — Live `MediaStream` from `getUserMedia`
 - `isRecording` — Whether MediaRecorder is active
+- `isPreviewing` — Whether preview-only stream is active (for crop selection)
 - `recordedVideo` — Object URL for playback
 - `currentBlobRef` / `audioBlobRef` — Recording data (Blob refs)
 - `chunksRef` — Accumulated `MediaRecorder` chunks
@@ -440,10 +464,17 @@ stateDiagram-v2
 - `timeRemaining` — Seconds left in countdown (`null` when no timer active)
 - `timerIntervalRef` — Ref holding the `setInterval` ID for the countdown
 - `autoStopPendingRef` — Flag that signals `onstop` handler to trigger `autoSaveAndProcess()`
+- `cropRegion` — Normalized `{x, y, width, height}` (0–1) defining the cropped area, or `null`
+- `cropEnabled` — Whether the user is in crop-drawing mode
+- `cropRegionRef` — Mutable ref mirroring `cropRegion` for the `requestAnimationFrame` loop
+- `cropVideoRef` — Hidden `<video>` element used as the canvas source during cropped recording
+- `animFrameRef` — `requestAnimationFrame` ID for the canvas draw loop
 
 **Key actions:**
-- `startRecording()` — Gets media stream with `chromeMediaSource: 'desktop'`, creates `MediaRecorder`, collects chunks at 1-second intervals. If `timerDuration > 0`, starts a per-second countdown interval that auto-stops recording when it reaches zero.
-- `stopRecording()` — Stops MediaRecorder and all tracks, clears any active timer, creates final Blob, generates object URL
+- `startPreview()` — Gets a video-only `MediaStream` for the selected screen. Used to show the live preview so the user can draw a crop rectangle before recording starts.
+- `stopPreview()` — Stops the preview-only stream and resets `isPreviewing`.
+- `startRecording()` — Gets a full media stream (audio + video) with `chromeMediaSource: 'desktop'`, creates `MediaRecorder`, collects chunks at 1-second intervals. **If `cropEnabled` and `cropRegion` are set**, creates an offscreen `<canvas>` sized to the crop dimensions, pipes frames via `requestAnimationFrame` + `drawImage()`, and records from `canvas.captureStream(30)` combined with the original audio tracks. If `timerDuration > 0`, starts a per-second countdown interval that auto-stops recording when it reaches zero.
+- `stopRecording()` — Stops MediaRecorder and all tracks, clears any active timer, cleans up the crop pipeline (`cancelAnimationFrame`, hidden video element), creates final Blob, generates object URL
 - `downloadVideo()` — Converts Blob → sends via `window.electronAPI.saveVideo()`
 - `processTranscript()` — Converts Blob → sends via `window.electronAPI.processTranscript()` → displays transcript + summary
 - `autoSaveAndProcess(blob)` — Triggered when the timer expires. Automatically saves the video via `saveVideo()` and then processes the transcript + summary via `processTranscript()` in sequence, updating status messages throughout.
@@ -517,7 +548,7 @@ sequenceDiagram
 
 ## 8. Recording Pipeline
 
-The recording pipeline captures screen content using Chromium's built-in media APIs.
+The recording pipeline captures screen content using Chromium's built-in media APIs. An optional **canvas-based crop** path intercepts the stream before it reaches `MediaRecorder`.
 
 ```mermaid
 graph LR
@@ -529,6 +560,13 @@ graph LR
     subgraph "2. Stream Capture"
         GM["getUserMedia({<br/>  audio: {chromeMediaSource:'desktop'},<br/>  video: {chromeMediaSource:'desktop'}<br/>})"]
         PREV["Live preview<br/>video.srcObject = stream"]
+    end
+
+    subgraph "2b. Crop Pipeline (optional)"
+        CV["Hidden &lt;video&gt;<br/>srcObject = stream"]
+        CAN["Offscreen &lt;canvas&gt;<br/>sized to crop region"]
+        RAF["requestAnimationFrame<br/>drawImage(sx,sy,sw,sh)"]
+        CS["canvas.captureStream(30)<br/>+ original audio tracks"]
     end
 
     subgraph "3. Recording"
@@ -544,7 +582,11 @@ graph LR
     end
 
     DC --> SEL --> GM --> PREV
-    GM --> MR --> CHK
+    GM -->|"no crop"| MR
+    GM -->|"crop enabled"| CV --> CAN
+    RAF -.-> CAN
+    CAN --> CS --> MR
+    MR --> CHK
     INT -.-> CHK
     CHK -->|"onstop"| BLOB --> URL --> PLAY
 
@@ -552,7 +594,24 @@ graph LR
     style GM fill:#E3F2FD,color:#000
     style MR fill:#FFF9C4,color:#000
     style BLOB fill:#E8F5E9,color:#000
+    style CV fill:#E1BEE7,color:#000
+    style CAN fill:#E1BEE7,color:#000
+    style RAF fill:#E1BEE7,color:#000
+    style CS fill:#E1BEE7,color:#000
 ```
+
+### Canvas-Based Crop Pipeline
+
+When the user selects a crop region before recording:
+
+1. The full desktop stream is piped into a hidden `<video>` element
+2. An offscreen `<canvas>` is sized to the crop dimensions (pixels)
+3. A `requestAnimationFrame` loop calls `ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh)` using the normalized `CropRegion` mapped to actual pixel coordinates
+4. `canvas.captureStream(30)` produces a cropped `MediaStream` (30 fps)
+5. The audio tracks from the original stream are merged with the canvas video tracks into a new `MediaStream`
+6. `MediaRecorder` records this combined stream — the saved file contains only the cropped region with full audio
+
+The crop region uses **normalized coordinates** (0–1) relative to the source video dimensions. The `CropOverlay` component maps between display pixels and normalized coordinates, accounting for `object-fit: contain` letterboxing.
 
 ### MIME Type Selection
 
@@ -882,6 +941,7 @@ graph TB
         DS3["DesktopSource"]
         EA2["ElectronAPI interface"]
         MT["MessageType"]
+        CR["CropRegion"]
     end
 
     SVR -.->|"mirrored"| SVR2
@@ -896,9 +956,10 @@ graph TB
     style EA fill:#FFE0B2,color:#000
     style DCC fill:#BBDEFB,color:#000
     style MT fill:#BBDEFB,color:#000
+    style CR fill:#E1BEE7,color:#000
 ```
 
-> **Note:** Types are duplicated across processes because each Electron process has its own TypeScript compilation target. The `RecordingType` enum, `SaveVideoResponse`, `ProcessTranscriptResponse`, and `DesktopSource` interfaces are defined in all three layers.
+> **Note:** Types are duplicated across processes because each Electron process has its own TypeScript compilation target. The `RecordingType` enum, `SaveVideoResponse`, `ProcessTranscriptResponse`, and `DesktopSource` interfaces are defined in all three layers. The `CropRegion` interface is renderer-only.
 
 ### Key Interfaces
 
@@ -916,6 +977,14 @@ interface DesktopCaptureConstraints {
     chromeMediaSource: 'desktop'
     chromeMediaSourceId: string
   }
+}
+
+// Normalized crop region (0–1 relative to source video dimensions)
+interface CropRegion {
+  x: number      // left edge (0 = left, 1 = right)
+  y: number      // top edge (0 = top, 1 = bottom)
+  width: number   // fraction of video width
+  height: number  // fraction of video height
 }
 
 // Python script JSON output format
