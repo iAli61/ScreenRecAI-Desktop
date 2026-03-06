@@ -10,6 +10,8 @@ declare global {
         filename: string,
         type: RecordingType
       ) => Promise<ProcessTranscriptResponse>
+      getStoragePath: () => Promise<string>
+      selectStoragePath: () => Promise<string | null>
     }
   }
 }

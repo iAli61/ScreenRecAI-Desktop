@@ -1,6 +1,6 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { getDesktopSources, saveVideo, processTranscript } from './api.utils'
+import { getDesktopSources, saveVideo, processTranscript, getStoragePath, selectStoragePath } from './api.utils'
 import { ElectronAPI } from '../types'
 
 /**
@@ -14,7 +14,9 @@ export function exposeAPIsWithContextIsolation(): void {
     contextBridge.exposeInMainWorld('electronAPI', {
       getDesktopSources,
       saveVideo,
-      processTranscript
+      processTranscript,
+      getStoragePath,
+      selectStoragePath
     } as ElectronAPI)
   } catch (error) {
     console.error('Error exposing APIs:', error)

@@ -11,6 +11,9 @@ interface RecordingControlsProps {
   hasVideo: boolean
   recordingType: RecordingType
   selectedScreen: DesktopSource | null
+  timerDuration: number
+  timeRemaining: number | null
+  onTimerDurationChange: (minutes: number) => void
   onRecordingTypeChange: (type: RecordingType) => void
   onStartRecording: () => void
   onStopRecording: () => void
@@ -25,12 +28,21 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   hasVideo,
   recordingType,
   selectedScreen,
+  timerDuration,
+  timeRemaining,
+  onTimerDurationChange,
   onRecordingTypeChange,
   onStartRecording,
   onStopRecording,
   onDownloadVideo,
   onProcessTranscript
 }) => {
+  const formatTime = (seconds: number): string => {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
+
   return (
     <div className="controls-card">
       <div className="controls-header">
@@ -62,6 +74,38 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                 </div>
               </label>
             ))}
+          </div>
+        </div>
+
+        <hr className="controls-divider" />
+
+        <div className="controls-section">
+          <label className="controls-label">Recording Timer (optional)</label>
+          <div className="timer-input-group">
+            <input
+              type="number"
+              min="0"
+              max="480"
+              value={timerDuration || ''}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10)
+                onTimerDurationChange(isNaN(val) || val < 0 ? 0 : Math.min(val, 480))
+              }}
+              disabled={isRecording}
+              placeholder="0"
+              className="timer-input"
+            />
+            <span className="timer-unit">minutes</span>
+            {timerDuration > 0 && !isRecording && (
+              <span className="timer-hint">
+                Recording will auto-stop after {timerDuration} min and save video + transcript
+              </span>
+            )}
+            {timeRemaining !== null && isRecording && (
+              <span className="timer-countdown">
+                ⏱ {formatTime(timeRemaining)} remaining
+              </span>
+            )}
           </div>
         </div>
 

@@ -20,6 +20,9 @@ interface UseRecordingReturn {
   previewVideoRef: React.RefObject<HTMLVideoElement | null>
   availableScreens: DesktopSource[]
   selectedScreen: DesktopSource | null
+  timerDuration: number
+  timeRemaining: number | null
+  setTimerDuration: (minutes: number) => void
   setRecordingType: (type: RecordingType) => void
   setSelectedScreen: (screen: DesktopSource | null) => void
   getAvailableScreens: () => Promise<void>
@@ -41,11 +44,15 @@ export const useRecording = (): UseRecordingReturn => {
   const [recordingType, setRecordingType] = useState<RecordingType>(RecordingType.VIDEO)
   const [availableScreens, setAvailableScreens] = useState<DesktopSource[]>([])
   const [selectedScreen, setSelectedScreen] = useState<DesktopSource | null>(null)
+  const [timerDuration, setTimerDuration] = useState<number>(0)
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const chunksRef = useRef<Blob[]>([])
   const currentBlobRef = useRef<Blob | null>(null)
   const audioBlobRef = useRef<Blob | null>(null)
   const previewVideoRef = useRef<HTMLVideoElement>(null)
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const autoStopPendingRef = useRef(false)
 
   useEffect(() => {
     if (previewVideoRef.current && stream) {
@@ -135,6 +142,11 @@ export const useRecording = (): UseRecordingReturn => {
           console.error('Blob is not a valid video')
         }
         testVideo.src = newBlobUrl
+
+        if (autoStopPendingRef.current) {
+          autoStopPendingRef.current = false
+          autoSaveAndProcess(blob)
+        }
       }
 
       mediaRecorder.onerror = (event) => {
@@ -144,12 +156,37 @@ export const useRecording = (): UseRecordingReturn => {
       mediaRecorder.start(1000)
       setMediaRecorder(mediaRecorder)
       setIsRecording(true)
+
+      if (timerDuration > 0) {
+        const totalSeconds = timerDuration * 60
+        setTimeRemaining(totalSeconds)
+        timerIntervalRef.current = setInterval(() => {
+          setTimeRemaining((prev) => {
+            if (prev === null || prev <= 1) {
+              if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current)
+                timerIntervalRef.current = null
+              }
+              autoStopPendingRef.current = true
+              mediaRecorder.stop()
+              mediaStream.getTracks().forEach((track) => track.stop())
+              return 0
+            }
+            return prev - 1
+          })
+        }, 1000)
+      }
     } catch (error) {
       console.error('Error starting recording:', error)
     }
   }
 
   const stopRecording = (): void => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
+    }
+    setTimeRemaining(null)
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop()
     }
@@ -158,6 +195,57 @@ export const useRecording = (): UseRecordingReturn => {
         track.stop()
       })
       setStream(null)
+    }
+  }
+
+  const autoSaveAndProcess = async (blob: Blob): Promise<void> => {
+    if (!window.electronAPI) return
+
+    setIsSaving(true)
+    setSaveMessage('')
+    setIsProcessingTranscript(true)
+    setTranscriptMessage('🔄 Timer ended. Saving video and processing transcript...')
+
+    try {
+      const filename = generateFilename()
+      const saveResult = await window.electronAPI.saveVideo(blob, filename)
+      if (saveResult.success) {
+        setSaveMessage(
+          `✅ ${saveResult.message}\nVideo: ${saveResult.videoPath}\nTranscript: ${saveResult.transcriptPath}`
+        )
+      } else {
+        setSaveMessage(`❌ ${saveResult.message}: ${saveResult.error}`)
+      }
+    } catch (error) {
+      setSaveMessage(`❌ Failed to save video: ${error}`)
+    } finally {
+      setIsSaving(false)
+    }
+
+    try {
+      const transcriptFilename = generateTranscriptFilename()
+      const result = await window.electronAPI.processTranscript(
+        blob,
+        transcriptFilename,
+        recordingType
+      )
+
+      if (result.success) {
+        setTranscriptMessage(`✅ Transcript and summary processed successfully!
+📝 Transcript: ${result.transcript}
+📋 Summary: ${result.summary}
+📁 Files:
+Transcript: ${result.transcriptPath}
+Summary: ${result.summaryPath}`)
+      } else {
+        setTranscriptMessage(`❌ Failed to process transcript: ${result.error}`)
+      }
+    } catch (error) {
+      setTranscriptMessage(
+        `❌ Error processing transcript: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    } finally {
+      setIsProcessingTranscript(false)
     }
   }
 
@@ -240,6 +328,9 @@ Summary: ${result.summaryPath}`)
     previewVideoRef,
     availableScreens,
     selectedScreen,
+    timerDuration,
+    timeRemaining,
+    setTimerDuration,
     setRecordingType,
     setSelectedScreen,
     getAvailableScreens,

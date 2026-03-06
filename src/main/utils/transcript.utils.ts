@@ -2,13 +2,98 @@ import { join } from 'path'
 import { existsSync } from 'fs'
 import { spawn } from 'child_process'
 import { app } from 'electron'
+import { homedir } from 'os'
 import { PythonScriptResult } from '../types'
 import { generateFallbackTranscript } from './file.utils'
+
+/**
+ * Find FFmpeg executable on Windows
+ */
+function findFfmpegPath(): string {
+  // Check common installation paths
+  const candidates = [
+    // Winget Gyan.FFmpeg install location
+    join(
+      homedir(),
+      'AppData',
+      'Local',
+      'Microsoft',
+      'WinGet',
+      'Packages',
+      'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe',
+      'ffmpeg-8.0.1-full_build',
+      'bin',
+      'ffmpeg.exe'
+    ),
+    // Common manual install locations
+    'C:\\ffmpeg\\bin\\ffmpeg.exe',
+    'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe'
+  ]
+
+  // Also glob for any version of the winget install
+  const wingetBase = join(
+    homedir(),
+    'AppData',
+    'Local',
+    'Microsoft',
+    'WinGet',
+    'Packages'
+  )
+  if (existsSync(wingetBase)) {
+    try {
+      const { readdirSync } = require('fs')
+      const dirs = readdirSync(wingetBase) as string[]
+      for (const dir of dirs) {
+        if (dir.startsWith('Gyan.FFmpeg')) {
+          const binDir = join(wingetBase, dir)
+          const subDirs = readdirSync(binDir) as string[]
+          for (const sub of subDirs) {
+            const ffmpegExe = join(binDir, sub, 'bin', 'ffmpeg.exe')
+            if (existsSync(ffmpegExe)) {
+              return ffmpegExe
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore errors during directory scanning
+    }
+  }
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate
+    }
+  }
+
+  // Fallback to PATH
+  return 'ffmpeg'
+}
+
+/**
+ * Get conda environment paths for the screenrecai environment
+ */
+function getCondaEnvPaths(): { python: string; ffmpeg: string } | null {
+  const condaEnvBase = join(homedir(), 'AppData', 'Local', 'miniconda3', 'envs', 'screenrecai')
+  const pythonPath = join(condaEnvBase, 'python.exe')
+
+  if (existsSync(pythonPath)) {
+    const ffmpegPath = findFfmpegPath()
+    return { python: pythonPath, ffmpeg: ffmpegPath }
+  }
+  return null
+}
 
 /**
  * Find available Python command
  */
 function findPythonCommand(): Promise<string | null> {
+  // First check for conda env
+  const condaPaths = getCondaEnvPaths()
+  if (condaPaths) {
+    return Promise.resolve(condaPaths.python)
+  }
+
   const commands = ['python3', 'python', 'py']
 
   return new Promise((resolve) => {
@@ -44,7 +129,7 @@ function findPythonCommand(): Promise<string | null> {
 /**
  * Extract transcript from video using Python script
  */
-export async function extractTranscriptFromVideo(videoPath: string): Promise<string> {
+export async function extractTranscriptFromVideo(videoPath: string, audioOutputPath?: string): Promise<string> {
   return new Promise(async (resolve) => {
     try {
       console.log('Running Python script to extract audio and transcribe...')
@@ -93,18 +178,31 @@ export async function extractTranscriptFromVideo(videoPath: string): Promise<str
           ffmpegPath = join(process.resourcesPath, 'ffmpeg-bin', 'ffmpeg')
         }
       } else {
-        const pythonCommand = await findPythonCommand()
-        if (!pythonCommand) {
-          console.log('No Python command found, using fallback')
-          resolve(generateFallbackTranscript(videoPath))
-          return
+        // In dev mode, prefer conda env paths
+        const condaPaths = getCondaEnvPaths()
+        if (condaPaths) {
+          pythonPath = condaPaths.python
+          ffmpegPath = condaPaths.ffmpeg
+          console.log('Using conda env Python:', pythonPath)
+          console.log('Using conda env FFmpeg:', ffmpegPath)
+        } else {
+          const pythonCommand = await findPythonCommand()
+          if (!pythonCommand) {
+            console.log('No Python command found, using fallback')
+            resolve(generateFallbackTranscript(videoPath))
+            return
+          }
+          pythonPath = pythonCommand
+          ffmpegPath = 'ffmpeg'
         }
-        pythonPath = pythonCommand
-        ffmpegPath = 'ffmpeg'
       }
 
-      console.log('Spawning Python process with:', pythonPath, scriptPath, videoPath)
-      const pythonProcess = spawn(pythonPath, [scriptPath, videoPath, ffmpegPath])
+      const args = [scriptPath, videoPath, ffmpegPath]
+      if (audioOutputPath) {
+        args.push(audioOutputPath)
+      }
+      console.log('Spawning Python process with:', pythonPath, ...args)
+      const pythonProcess = spawn(pythonPath, args)
 
       let stdout = ''
       let stderr = ''

@@ -22,6 +22,14 @@ export async function getDesktopSources(): Promise<DesktopSource[]> {
   return sources
 }
 
+export async function getStoragePath(): Promise<string> {
+  return await ipcRenderer.invoke('get-storage-path')
+}
+
+export async function selectStoragePath(): Promise<string | null> {
+  return await ipcRenderer.invoke('select-storage-path')
+}
+
 /**
  * Save video file via main process
  */

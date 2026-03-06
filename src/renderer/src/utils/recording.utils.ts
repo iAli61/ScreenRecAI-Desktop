@@ -51,9 +51,9 @@ export const generateTranscriptFilename = (): string => {
  * Get the MIME type for video recording
  */
 export const getVideoMimeType = (): string => {
-  return MediaRecorder.isTypeSupported('video/webm; codecs=vp9')
-    ? 'video/webm; codecs=vp9'
-    : MediaRecorder.isTypeSupported('video/webm; codecs=vp8')
-      ? 'video/webm; codecs=vp8'
-      : 'video/webm'
+  return MediaRecorder.isTypeSupported('video/mp4; codecs=avc1')
+    ? 'video/mp4; codecs=avc1'
+    : MediaRecorder.isTypeSupported('video/mp4')
+      ? 'video/mp4'
+      : 'video/webm; codecs=vp9'
 }

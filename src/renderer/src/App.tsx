@@ -17,6 +17,9 @@ export default function App(): React.JSX.Element {
     previewVideoRef,
     availableScreens,
     selectedScreen,
+    timerDuration,
+    timeRemaining,
+    setTimerDuration,
     setRecordingType,
     setSelectedScreen,
     getAvailableScreens,
@@ -41,6 +44,9 @@ export default function App(): React.JSX.Element {
       recordedVideo={recordedVideo}
       availableScreens={availableScreens}
       selectedScreen={selectedScreen}
+      timerDuration={timerDuration}
+      timeRemaining={timeRemaining}
+      onTimerDurationChange={setTimerDuration}
       onRecordingTypeChange={setRecordingType}
       onScreenSelect={setSelectedScreen}
       onRefreshScreens={getAvailableScreens}

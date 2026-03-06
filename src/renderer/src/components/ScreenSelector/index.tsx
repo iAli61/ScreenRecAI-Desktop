@@ -25,7 +25,7 @@ export const ScreenSelector: React.FC<ScreenSelectorProps> = ({
           <div className="screen-selector-icon">
             <MonitorIcon />
           </div>
-          <h3 className="screen-selector-heading">Screen Selection</h3>
+          <h3 className="screen-selector-heading">Source Selection</h3>
         </div>
         <button
           onClick={onRefreshScreens}
@@ -41,7 +41,7 @@ export const ScreenSelector: React.FC<ScreenSelectorProps> = ({
         {availableScreens.length === 0 ? (
           <div className="screen-selector-empty">
             <p className="screen-selector-empty-text">
-              No screens available. Click &quot;Refresh&quot; to detect available screens.
+              No sources available. Click &quot;Refresh&quot; to detect available screens and windows.
             </p>
           </div>
         ) : (
@@ -59,7 +59,9 @@ export const ScreenSelector: React.FC<ScreenSelectorProps> = ({
                 <div className="screen-selector-option-content">
                   <div className="screen-selector-option-info">
                     <span className="screen-selector-option-name">{screen.name}</span>
-                    <span className="screen-selector-option-id">ID: {screen.display_id}</span>
+                    <span className="screen-selector-option-id">
+                      {screen.id.startsWith('screen:') ? '🖥️ Screen' : '🪟 Window'}
+                    </span>
                   </div>
                   <div className="screen-selector-thumbnail">
                     <div className="screen-selector-thumbnail-placeholder">

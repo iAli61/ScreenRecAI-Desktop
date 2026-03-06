@@ -1,6 +1,7 @@
 export interface SaveVideoResponse {
   success: boolean
   videoPath?: string
+  audioPath?: string
   transcriptPath?: string
   message: string
   error?: string
@@ -10,6 +11,7 @@ export interface ProcessTranscriptResponse {
   success: boolean
   transcript?: string
   summary?: string
+  audioPath?: string
   transcriptPath?: string
   summaryPath?: string
   message: string
@@ -34,6 +36,7 @@ export interface FilePaths {
   desktopPath: string
   dateDir: string
   videoPath: string
+  audioPath: string
   transcriptPath: string
   summaryPath: string
 }

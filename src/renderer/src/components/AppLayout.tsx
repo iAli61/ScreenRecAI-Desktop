@@ -5,6 +5,7 @@ import { StatusMessages } from './StatusMessages/index'
 import { RecordingStatus } from './RecordingStatus/index'
 import { VideoPreview } from './VideoPreview/index'
 import { ScreenSelector } from './ScreenSelector/index'
+import { StoragePath } from './StoragePath/index'
 import { RecordingType, DesktopSource } from '../types'
 
 interface AppLayoutProps {
@@ -21,6 +22,9 @@ interface AppLayoutProps {
   recordedVideo: string | null
   availableScreens: DesktopSource[]
   selectedScreen: DesktopSource | null
+  timerDuration: number
+  timeRemaining: number | null
+  onTimerDurationChange: (minutes: number) => void
   onRecordingTypeChange: (type: RecordingType) => void
   onScreenSelect: (screen: DesktopSource | null) => void
   onRefreshScreens: () => Promise<void>
@@ -44,6 +48,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   recordedVideo,
   availableScreens,
   selectedScreen,
+  timerDuration,
+  timeRemaining,
+  onTimerDurationChange,
   onRecordingTypeChange,
   onScreenSelect,
   onRefreshScreens,
@@ -64,6 +71,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           onRefreshScreens={onRefreshScreens}
         />
 
+        <StoragePath />
+
         <RecordingControls
           isRecording={isRecording}
           isSaving={isSaving}
@@ -71,6 +80,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           hasVideo={hasVideo}
           recordingType={recordingType}
           selectedScreen={selectedScreen}
+          timerDuration={timerDuration}
+          timeRemaining={timeRemaining}
+          onTimerDurationChange={onTimerDurationChange}
           onRecordingTypeChange={onRecordingTypeChange}
           onStartRecording={onStartRecording}
           onStopRecording={onStopRecording}

@@ -1,8 +1,35 @@
 import { join } from 'path'
-import { writeFile, mkdir } from 'fs/promises'
+import { writeFile, mkdir, readFile } from 'fs/promises'
 import { existsSync, statSync } from 'fs'
 import { app } from 'electron'
 import { FilePaths } from '../types'
+
+const CONFIG_FILE = 'storage-config.json'
+
+function getConfigPath(): string {
+  return join(app.getPath('userData'), CONFIG_FILE)
+}
+
+export async function getStoragePath(): Promise<string> {
+  const configPath = getConfigPath()
+  if (existsSync(configPath)) {
+    try {
+      const data = await readFile(configPath, 'utf-8')
+      const config = JSON.parse(data)
+      if (config.storagePath && typeof config.storagePath === 'string') {
+        return config.storagePath
+      }
+    } catch {
+      // fall through to default
+    }
+  }
+  return join(app.getPath('desktop'), 'captured-videos')
+}
+
+export async function setStoragePath(newPath: string): Promise<void> {
+  const configPath = getConfigPath()
+  await writeFile(configPath, JSON.stringify({ storagePath: newPath }), 'utf-8')
+}
 
 /**
  * Create the necessary directories for file storage
@@ -11,28 +38,29 @@ export async function createStorageDirectories(): Promise<{
   desktopPath: string
   dateDir: string
 }> {
-  const desktopPath = join(app.getPath('desktop'), 'captured-videos')
+  const storagePath = await getStoragePath()
 
-  if (!existsSync(desktopPath)) {
-    await mkdir(desktopPath, { recursive: true })
+  if (!existsSync(storagePath)) {
+    await mkdir(storagePath, { recursive: true })
   }
 
   const now = new Date()
   const dateStr = now.toISOString().split('T')[0]
-  const dateDir = join(desktopPath, dateStr)
+  const dateDir = join(storagePath, dateStr)
 
   if (!existsSync(dateDir)) {
     await mkdir(dateDir, { recursive: true })
   }
 
-  return { desktopPath, dateDir }
+  return { desktopPath: storagePath, dateDir }
 }
 
 /**
  * Generate file paths for video, transcript, and summary
  */
 export function generateFilePaths(dateDir: string, filename: string): FilePaths {
-  const videoPath = join(dateDir, `${filename}.webm`)
+  const videoPath = join(dateDir, `${filename}.mp4`)
+  const audioPath = join(dateDir, `${filename}.wav`)
   const transcriptPath = join(dateDir, `${filename}.txt`)
   const summaryPath = join(dateDir, `${filename}-summary.txt`)
 
@@ -40,6 +68,7 @@ export function generateFilePaths(dateDir: string, filename: string): FilePaths 
     desktopPath: dateDir,
     dateDir,
     videoPath,
+    audioPath,
     transcriptPath,
     summaryPath
   }

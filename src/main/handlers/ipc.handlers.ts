@@ -1,11 +1,13 @@
-import { ipcMain, desktopCapturer } from 'electron'
+import { ipcMain, desktopCapturer, dialog, BrowserWindow } from 'electron'
 import { SaveVideoResponse, ProcessTranscriptResponse } from '../types'
 import {
   createStorageDirectories,
   generateFilePaths,
   saveVideoFile,
   saveTranscriptFile,
-  saveSummaryFile
+  saveSummaryFile,
+  getStoragePath,
+  setStoragePath
 } from '../utils/file.utils'
 import { extractTranscriptFromVideo } from '../utils/transcript.utils'
 import { generateSummary } from '../utils/ollama.utils'
@@ -16,9 +18,27 @@ import { generateSummary } from '../utils/ollama.utils'
 export function registerIpcHandlers(): void {
   ipcMain.handle('get-desktop-sources', async () => {
     const sources = await desktopCapturer.getSources({
-      types: ['screen']
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 150, height: 150 }
     })
     return sources
+  })
+
+  ipcMain.handle('get-storage-path', async () => {
+    return await getStoragePath()
+  })
+
+  ipcMain.handle('select-storage-path', async () => {
+    const win = BrowserWindow.getFocusedWindow()
+    const result = await dialog.showOpenDialog(win!, {
+      properties: ['openDirectory'],
+      title: 'Select storage folder for recordings'
+    })
+    if (!result.canceled && result.filePaths.length > 0) {
+      await setStoragePath(result.filePaths[0])
+      return result.filePaths[0]
+    }
+    return null
   })
 
   ipcMain.handle(
@@ -26,7 +46,7 @@ export function registerIpcHandlers(): void {
     async (_, videoBlob: Buffer, filename: string): Promise<SaveVideoResponse> => {
       try {
         const { dateDir } = await createStorageDirectories()
-        const { videoPath, transcriptPath } = generateFilePaths(dateDir, filename)
+        const { videoPath, audioPath, transcriptPath } = generateFilePaths(dateDir, filename)
 
         await saveVideoFile(videoPath, videoBlob)
         await saveTranscriptFile(transcriptPath, '')
@@ -34,6 +54,7 @@ export function registerIpcHandlers(): void {
         return {
           success: true,
           videoPath,
+          audioPath,
           transcriptPath,
           message: 'Video saved successfully!'
         }
@@ -58,10 +79,10 @@ export function registerIpcHandlers(): void {
     ): Promise<ProcessTranscriptResponse> => {
       try {
         const { dateDir } = await createStorageDirectories()
-        const { videoPath, transcriptPath, summaryPath } = generateFilePaths(dateDir, filename)
+        const { videoPath, audioPath, transcriptPath, summaryPath } = generateFilePaths(dateDir, filename)
 
         await saveVideoFile(videoPath, videoBlob)
-        const transcript = await extractTranscriptFromVideo(videoPath)
+        const transcript = await extractTranscriptFromVideo(videoPath, audioPath)
         const summary = await generateSummary(transcript, recordingType)
 
         await saveTranscriptFile(transcriptPath, transcript)
@@ -71,6 +92,7 @@ export function registerIpcHandlers(): void {
           success: true,
           transcript,
           summary,
+          audioPath,
           transcriptPath,
           summaryPath,
           message: 'Transcript and summary processed successfully!'

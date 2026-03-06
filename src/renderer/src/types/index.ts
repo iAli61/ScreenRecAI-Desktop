@@ -14,6 +14,7 @@ export enum RecordingType {
 export interface SaveVideoResponse {
   success: boolean
   videoPath?: string
+  audioPath?: string
   transcriptPath?: string
   message: string
   error?: string
@@ -23,6 +24,7 @@ export interface ProcessTranscriptResponse {
   success: boolean
   transcript?: string
   summary?: string
+  audioPath?: string
   transcriptPath?: string
   summaryPath?: string
   message: string
@@ -45,6 +47,8 @@ export interface ElectronAPI {
     filename: string,
     type: RecordingType
   ) => Promise<ProcessTranscriptResponse>
+  getStoragePath: () => Promise<string>
+  selectStoragePath: () => Promise<string | null>
 }
 
 export type MessageType = 'success' | 'error' | 'loading' | 'info'

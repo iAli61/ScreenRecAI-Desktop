@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 import speech_recognition as sr
 from pydub import AudioSegment
+import torch
 import whisper
 
 def extract_audio_from_video(video_path, ffmpeg_path, output_audio_path=None):
@@ -50,7 +51,8 @@ def transcribe_audio_whisper(audio_path):
     Transcribe audio using OpenAI Whisper (local)
     """
     try:
-        model = whisper.load_model("base")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = whisper.load_model("base", device=device)
         result = model.transcribe(audio_path)
 
         return result["text"].strip()
@@ -91,8 +93,14 @@ def main():
         sys.exit(1)
 
     video_path = sys.argv[1]
-    ffmpeg_path = sys.argv[2]
+    ffmpeg_path = sys.argv[2] if len(sys.argv) > 2 else 'ffmpeg'
     output_audio_path = sys.argv[3] if len(sys.argv) > 3 else None
+
+    # Configure pydub to use the provided ffmpeg path
+    ffmpeg_dir = os.path.dirname(ffmpeg_path)
+    if ffmpeg_dir:
+        AudioSegment.converter = ffmpeg_path
+        os.environ['PATH'] = ffmpeg_dir + os.pathsep + os.environ.get('PATH', '')
 
     if not os.path.exists(video_path):
         print(f"Error: Video file '{video_path}' not found", file=sys.stderr)
@@ -121,12 +129,6 @@ def main():
     }
 
     print(json.dumps(result, indent=2))
-    if output_audio_path is None and os.path.exists(audio_path):
-        try:
-            os.remove(audio_path)
-            print(f"Cleaned up temporary audio file: {audio_path}", file=sys.stderr)
-        except:
-            pass
 
 if __name__ == "__main__":
     main()

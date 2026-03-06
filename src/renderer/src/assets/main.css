@@ -137,6 +137,28 @@
   @apply flex flex-wrap gap-3;
 }
 
+.timer-input-group {
+  @apply flex items-center flex-wrap gap-3;
+}
+
+.timer-input {
+  @apply w-20 px-3 py-2 text-sm border border-slate-300 rounded-md bg-white text-slate-700
+    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+    disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed;
+}
+
+.timer-unit {
+  @apply text-sm text-slate-500;
+}
+
+.timer-hint {
+  @apply text-xs text-blue-600;
+}
+
+.timer-countdown {
+  @apply text-sm font-semibold text-red-600 animate-pulse;
+}
+
 .video-grid {
   @apply grid grid-cols-1 gap-6;
 }
